@@ -1,0 +1,25 @@
+---
+- name: Elastic deploy
+  hosts: elastic
+  become: yes
+  become_method: sudo
+  serial: 1
+  roles:
+    - role: elastichsearch
+
+- name: Kibana deploy
+  hosts: kibana
+  become: yes
+  become_method: sudo
+  serial: 1
+  roles:
+    - role: kibana
+
+- name: Logstash deply
+  hosts: logstash
+  become: yes
+  become_method: sudo
+  serial: 1
+  roles:
+    - role: logstash
+ 

@@ -1,0 +1,93 @@
+---
+- name: update docker
+  yum:
+    name: docker
+    state: latest
+
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted
+
+- name: pull kibana image
+  docker_image:
+    name: docker.elastic.co/logstash/logstash:7.6.0
+    source: pull
+
+- name: create direcotry config
+  file:
+    path: /logstash/config/config/
+    state: directory
+    owner: challenge
+    group: challenge
+    mode: 0755
+
+- name: create direcotry pipeline
+  file:
+    path: /logstash/config/pipeline/
+    state: directory
+    owner: challenge
+    group: challenge    
+    mode: 0755
+
+- name: Template logstash conf
+  template: 
+    src: logstash.yml.j2
+    dest: "/logstash/config/config/logstash.yml"
+    owner: root
+    group: root
+    mode: 0664
+    backup: yes
+
+- name: Template pipilne conf
+  template:
+    src: logstash.conf.j2
+    dest: "/logstash/config/pipeline/logstash.conf"
+    owner: root
+    group: root
+    mode: 0664
+    backup: yes
+
+- name: Template log4j2 conf
+  template:
+    src: log4j2.properties.j2
+    dest: "/logstash/config/config/log4j2.properties"
+    owner: root
+    group: root
+    mode: 0664
+    backup: yes
+
+- name: Template pipeline yml
+  template:
+    src: pipelines.yml.j2
+    dest: "/logstash/config/config/pipelines.yml"
+    owner: root
+    group: root
+    mode: 0664
+    backup: yes
+
+- name: Template logstash conf
+  template:
+    src: jvm.options.j2
+    dest: "/logstash/config/config/jvm.options"
+    owner: root
+    group: root
+    mode: 0664
+    backup: yes
+
+
+- name: Template logstash conf
+  template:
+    src: startup.options.j2
+    dest: "/logstash/config/config/startup.options"
+    owner: root
+    group: root
+    mode: 0664
+    backup: yes
+
+- name: Disable selinux
+  command: sudo setenforce 0
+
+- name: run logstash container
+  command: sudo docker run -d --name logstash -v /logstash/config/config/:/usr/share/logstash/config/  -v /logstash/config/pipeline/:/usr/share/logstash/pipeline/ -v /logstash/data/:/usr/share/logstash/data/  docker.elastic.co/logstash/logstash:7.6.0
+

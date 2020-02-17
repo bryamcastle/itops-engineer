@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+set -e
+
+set -x
+
+function config_hosts(){
+  echo "Configuring /etc/hosts ..."
+  echo "192.168.50.10 server01.challenge.lab server01"   >> /etc/hosts
+  echo "192.168.50.20 server02.challenge.lab server02"   >> /etc/hosts
+  echo "192.168.50.30 server03.challenge.lab server03"   >> /etc/hosts
+  echo "192.168.50.40 server04.challenge.lab server04"   >> /etc/hosts
+
+}
+
+function config_lvm(){
+	sudo yum install lvm2 -y
+	sudo pvcreate /dev/sdb
+	sudo vgcreate elasticsearch /dev/sdb
+	sudo lvcreate --name data --size 5G elasticsearch
+	sudo lvcreate --name config --size 0.7G elasticsearch
+	sudo mkfs -t ext4 /dev/elasticsearch/data
+	sudo mkfs -t ext4 /dev/elasticsearch/config
+	sudo mkdir -p /elasticsearch/data
+	sudo mkdir -p /elasticsearch/config
+	sudo mount /dev/elasticsearch/data /elasticsearch/data
+	sudo mount /dev/elasticsearch/config /elasticsearch/config
+	sudo chown -R vagrant:vagrant /elasticsearch/
+
+	sudo cp /etc/fstab /etc/fstab.orig
+	sudo tee -a /etc/fstab <<-EOF
+	/dev/mapper/elasticsearch-config	/elasticsearch/config	ext4     defaults    0   0
+	/dev/mapper/elasticsearch-data	/elasticsearch/data	    ext4     defaults    0   0
+	EOF
+}
+
+function add_user(){
+	sudo adduser challenge
+	sudo usermod -a -G vagrant challenge
+	echo challenge:challenge | sudo chpasswd 
+}
+
+function enable_passwordlogin(){
+	sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+	sudo systemctl restart sshd
+}
+
+function install_ansible(){
+	sudo yum update -y
+	sudo yum install epel-release vim -y
+#	sudo yum install epel-repo -y
+	sudo yum install ansible -y
+}
+
+function generate_keys(){
+	mkdir /home/challenge/.ssh/
+	ssh-keygen -f /home/challenge/.ssh/id_rsa -N ""
+	chown -R challenge:challenge /home/challenge/
+	cat /home/challenge/.ssh/id_rsa.pub >> /home/challenge/.ssh/authorized_keys
+	chown -R challenge:challenge /home/challenge/
+	cat /home/challenge/.ssh/id_rsa.pub > /shared/key.pub
+}
+
+function install_python_dependencies(){
+	sudo yum install python-pip -y
+	sudo yum install python-devel -y
+	sudo pip install --upgrade pip
+	sudo pip install docker
+}
+
+function elastic_system_conf(){
+	sudo swapoff -a
+	sudo sysctl -w vm.max_map_count=262144
+	sudo su -
+	ulimit -n 65535
+	ulimit -u 4096
+}
+
+
+#config_hosts
+#add_user
+#install_ansible
+generate_keys
+echo "DONE"

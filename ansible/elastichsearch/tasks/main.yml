@@ -1,0 +1,56 @@
+---
+- name: Template repository version 7
+  template:
+    src: elasticsearch.repo.version.7
+    dest: "/etc/yum.repos.d/elasticsearch.repo"
+    owner: root
+    group: root
+    mode: 0664
+    backup: yes
+
+- name: import key
+  rpm_key:
+    state: present
+    key: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+- name: yum update
+  yum:
+    name: '*'
+    state: latest
+
+- pause:
+    seconds: 30
+
+- name: install elasticsearch
+  yum:
+    name: elasticsearch
+    state: present    
+
+- name: Template system start and stop
+  template:
+    src: elasticsearch.service.j2
+    dest: "/lib/systemd/system/elasticsearch.service"
+    owner: root
+    group: root
+    mode: 0664
+    backup: yes
+    
+- name: system reload
+  command: systemctl daemon-reload
+
+- name: start elasticsearch
+  systemd:
+    name: elasticsearch.service
+    state: restarted
+
+- name: Template elastic config
+  template:
+    src: elasticsearch.yml.j2
+    dest: "/etc/elasticsearch/elasticsearch.yml"
+    owner: root
+    owner: root
+    mode: 0664
+    backup: yes
+
+- pause:
+    seconds: 30
